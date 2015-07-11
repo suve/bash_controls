@@ -1,0 +1,9 @@
+[Unit]
+Description=Change group of /sys/class/backlight/panasonic/brightness so regular users can adjust the LCD brightness
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'chgrp bricon /sys/class/backlight/panasonic/brightness; chmod 660 /sys/class/backlight/panasonic/brightness'
+
+[Install]
+WantedBy=multi-user.target
