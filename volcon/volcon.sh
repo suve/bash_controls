@@ -5,16 +5,42 @@ CONTROL='Master'
 MICROPHONE='Capture'
 
 USAGE=$(cat <<EOT
-Usage: volcon [-d device] [-c control] [-mnq] <inc|dec|set> <value>
-       volcon [-d device] [-c control] [-mnq] <get|mute|unmute|toggle>
+Usage: volcon [-d device] [-c control] [-mniq] <inc|dec|set> <value>
+       volcon [-d device] [-c control] [-mniq] <get|mute|unmute|toggle>
   -d  Specify the amixer device to use. Defaults to '$DEVICE'.
   -c  Specify the amixer control to use. Defaults to '$CONTROL'.
   -m  Use the microphone control. Equivalent to -c '$MICROPHONE'.
   -n  Display a desktop notification with control status and volume.
       Requires 'notify-send' present on the system.
+  -i  Include icons in the notifications.
+      Using this option does NOT automatically enable -n.
   -q  Do not print amixer output.
 EOT
 );
+
+function choose_icon() {
+   if [ "$ICONS_ENABLE" == '' ]; then
+      return
+   fi
+   
+   
+   local ICONNAME='audio-volume'
+   
+   if [ "$ICONS_MICROPHONE" != '' ]; then
+      ICONNAME='microphone-sensitivity'
+   fi
+   
+   
+   if [ "$1" -eq 0 ]; then
+      NOTIF_ICON="$ICONNAME-muted"
+   elif [ "$1" -le 33 ]; then
+      NOTIF_ICON="$ICONNAME-low"
+   elif [ "$1" -le 66 ]; then
+      NOTIF_ICON="$ICONNAME-medium"
+   else
+      NOTIF_ICON="$ICONNAME-high"
+   fi
+}
 
 function volcon() {
    OUTPUT=`amixer $@`
@@ -30,25 +56,36 @@ function volcon() {
       AVG=`expr $SUM / $NUM`
       
       if [ `echo "$OUTPUT" | grep -c -e '\[on\]'` -gt 0 ]; then
+         choose_icon "$AVG"
          STATUS="$AVG%"
       else
+         choose_icon 0
          STATUS="$AVG%  [MUTE]"
       fi
       
-      notify-send -a 'volcon' -t 1500 "$CONTROL: $STATUS"
+      notify-send -a 'volcon' -i "$NOTIF_ICON" -t 1500 "$CONTROL: $STATUS"
    fi
 }
 
+if [ "$#" -lt 1 ] || [ "$1" == "--help" ]; then
+   echo "$USAGE"
+   exit
+fi
+
+
 # Use getopts to check for -options
-while getopts 'd:c:mnq' OPTNAME; do
+while getopts 'd:c:mniq' OPTNAME; do
    if [ "$OPTNAME" == 'd' ]; then
-      DEVICE="OPTARG"
+      DEVICE=$OPTARG
    elif [ "$OPTNAME" == 'c' ]; then
-      CONTROL="$OPTARG"
+      CONTROL=$OPTARG
    elif [ "$OPTNAME" == 'm' ]; then
-      CONTROL="$MICROPHONE"
+      CONTROL=$MICROPHONE
+      ICONS_MICROPHONE=1
    elif [ "$OPTNAME" == 'n' ]; then
       NOTIFY=1
+   elif [ "$OPTNAME" == 'i' ]; then
+      ICONS_ENABLE=1
    elif [ "$OPTNAME" == 'q' ]; then
       QUIET=1
    fi

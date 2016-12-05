@@ -1,12 +1,14 @@
 volcon
 ========================================
-Usage: volcon [-d device] [-c control] [-m] <inc|dec|set> <value>
-       volcon [-d device] [-c control] [-m] <get|mute|unmute|toggle>
+Usage: volcon [-d device] [-c control] [-mniq] <inc|dec|set> <value>
+       volcon [-d device] [-c control] [-mniq] <get|mute|unmute|toggle>
   -d  Specify the amixer device to use. Defaults to 'default'.
   -c  Specify the amixer control to use. Defaults to 'Master'.
   -m  Use the microphone control. Equivalent to -c 'Capture'.
   -n  Display a desktop notification with control status and volume.
       Requires 'notify-send' present on the system.
+  -i  Include icons in the notifications.
+      Using this option does NOT automatically enable -n.
   -q  Do not print amixer output.
 
 When called with the "get" parameter, volcon returns the current
