@@ -1,7 +1,7 @@
 #!/bin/bash
 
 USAGE=$(cat <<EOT
-Usage: howmanyinternets [-0|-r|-t|-s] [-h] DEVICE
+Usage: howmanyinternets [-0|-r|-t|-s|-f FORMAT] [-h] DEVICE
   DEVICE must name a network device present on the system.
   
   -0  Zero the statistics.
@@ -9,7 +9,11 @@ Usage: howmanyinternets [-0|-r|-t|-s] [-h] DEVICE
   -t  Print total number of transferred (sent) bytes.
   -s  Print the sum of sent and received bytes (default).
   
-  -h  Use a human-readable format.
+  -f  Print a custom string. Inside the format string,
+      %r, %t, %s sequences can be used to print relevant info.
+      Use %% to display a literal percent sign.
+  
+  -h  Use a human-readable format. 
 EOT
 );
 
@@ -19,40 +23,72 @@ if [ "$#" -lt 1 ] || [ "$1" == "--help" ]; then
 fi
 
 
-MODE='-s'
+ZERO='0'
+FORMAT='%s'
 DEVICE=''
 HUMAN_READABLE=0
 
 while [ "$#" -gt 0 ]; do
-	if [ "$1" == "-r" ] || [ "$1" == "-t" ] || [ "$1" == "-s" ] || [ "$1" == "-0" ]; then
-		MODE=$1
-	else
-		if [ "$1" == "-h" ]; then
+	case "$1" in
+		-0 )
+			ZERO='1'
+		;;
+		
+		-r )
+			ZERO='0'
+			FORMAT='%r'
+		;;
+		
+		-t )
+			ZERO='0'
+			FORMAT='%t'
+		;;
+		
+		-s )
+			ZERO='0'
+			FORMAT='%s'
+		;;
+		
+		-f )
+			if [[ "$#" -eq 1 ]]; then
+				echo "howmanyinternets: the -f switch must be followed by a format string"
+				echo "$USAGE"
+				exit
+			else
+				FORMAT=$2
+				shift
+			fi
+		;;
+		
+		-h )
 			HUMAN_READABLE=1
-		else
+		;;
+		
+		* )
 			DEVICE=$1
-		fi
-	fi
+	esac
 	
 	shift
 done
 
 if [ "$DEVICE" == "" ]; then
-	echo "$USAGE"
-	exit
-fi
-if [ "$MODE" != "-r" ] && [ "$MODE" != "-t" ] && [ "$MODE" != "-s" ] && [ "$MODE" != "-0" ]; then
+	echo -e "howmanyinternets: No DEVICE provided\n"
 	echo "$USAGE"
 	exit
 fi
 
 if [ ! -d "/sys/class/net/$DEVICE" ]; then
-	echo "The device '$DEVICE' does not seem to exist"
+	echo "howmanyinternets: The device '$DEVICE' does not seem to exist"
 	exit
 fi
 
 
-mkdir -p "$HOME/.local/share/suve/howmanyinternets/" || exit
+mkdir -p "$HOME/.local/share/suve/howmanyinternets/"
+if [[ "$?" -ne 0 ]]; then
+	echo "howmanyinternets: failed to create data directory"
+	exit
+fi
+
 
 FILENAME="$HOME/.local/share/suve/howmanyinternets/$DEVICE.txt"
 if [ -a "$FILENAME" ] && [ "$MODE" != "-0" ]; then
@@ -92,38 +128,39 @@ echo "OUT_BYTES_TOTAL=$OUT_BYTES_TOTAL" >> "$FILENAME"
 
 function format_data() {
 	if [ "$2" -eq 0 ]; then
-		echo "$1"
+		RESULT=$1
 		return
 	fi
 	
-	SCALE=0
-	SCALE_ARR=('B' 'KiB' 'MiB' 'GiB' 'TiB' 'PiB' 'EiB')
+	local SCALE=0
+	local SCALE_ARR=('B' 'KiB' 'MiB' 'GiB' 'TiB' 'PiB' 'EiB')
 	
-	ORIGINAL=$1
-	CURRENT=$1
+	local ORIGINAL=$1
+	local CURRENT=$1
 	while [ "$CURRENT" -ge 1024 ]; do
 		SCALE=`expr $SCALE + 1`
 		CURRENT=`expr $CURRENT / 1024`
 	done
 	
 	if [ "$SCALE" -eq 0 ]; then
-		echo "${ORIGINAL}${SCALE_ARR[0]}"
+		RESULT="${ORIGINAL}${SCALE_ARR[0]}"
 	else
-		NUMBER=`echo 'scale=2; '"$ORIGINAL"' / 1024^'"$SCALE" | bc`
-		echo "${NUMBER}${SCALE_ARR[$SCALE]}"
+		local NUMBER=`echo 'scale=2; '"$ORIGINAL"' / 1024^'"$SCALE" | bc`
+		RESULT="${NUMBER}${SCALE_ARR[$SCALE]}"
 	fi
 }
 
 
+# Format data
+format_data $IN_BYTES_TOTAL $HUMAN_READABLE
+FMT_IN=$RESULT
+
+format_data $OUT_BYTES_TOTAL $HUMAN_READABLE
+FMT_OUT=$RESULT
+
+format_data `expr $IN_BYTES_TOTAL + $OUT_BYTES_TOTAL` $HUMAN_READABLE
+FMT_SUM=$RESULT
+
+
 # Print what the user wanted
-if [ "$MODE" == "-r" ]; then
-	format_data $IN_BYTES_TOTAL $HUMAN_READABLE
-else
-	if [ "$MODE" == "-t" ]; then
-		format_data $OUT_BYTES_TOTAL $HUMAN_READABLE
-	else
-		if [ "$MODE" == "-s" ]; then
-			format_data `expr $IN_BYTES_TOTAL + $OUT_BYTES_TOTAL` $HUMAN_READABLE
-		fi
-	fi
-fi
+echo "$FORMAT" | sed -e "s/%r/$FMT_IN/g" -e "s/%t/$FMT_OUT/g" -e "s/%s/$FMT_SUM/g" -e "s/%%/%/g"

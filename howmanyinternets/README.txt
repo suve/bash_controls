@@ -1,6 +1,6 @@
 howmanyinternets
 ========================================
-Usage: howmanyinternets [-0|-r|-t|-s] [-h] DEVICE
+Usage: howmanyinternets [-0|-r|-t|-s|-f FORMAT] [-h] DEVICE
   DEVICE must name a network device present on the system.
   
   -0  Zero the statistics.
@@ -8,7 +8,11 @@ Usage: howmanyinternets [-0|-r|-t|-s] [-h] DEVICE
   -t  Print total number of transferred (sent) bytes.
   -s  Print the sum of sent and received bytes (default).
   
-  -h  Use a human-readable format.
+  -f  Print a custom string. Inside the format string,
+      %r, %t, %s sequences can be used to print relevant info.
+      Use %% to display a literal percent sign.
+  
+  -h  Use a human-readable format. 
 
 ----------------------------------------
 
