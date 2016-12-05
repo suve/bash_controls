@@ -13,7 +13,8 @@ Usage: howmanyinternets [-0|-r|-t|-s|-f FORMAT] [-h] DEVICE
       %r, %t, %s sequences can be used to print relevant info.
       Use %% to display a literal percent sign.
   
-  -h  Use a human-readable format. 
+  -h  Use a human-readable format (binary SI prefixes).
+  -H  Use a human-readable format (decimal SI prefixes).
 EOT
 );
 
@@ -64,6 +65,10 @@ while [ "$#" -gt 0 ]; do
 			HUMAN_READABLE=1
 		;;
 		
+		-H )
+			HUMAN_READABLE=2
+		;;
+		
 		* )
 			DEVICE=$1
 	esac
@@ -84,7 +89,7 @@ fi
 
 
 mkdir -p "$HOME/.local/share/suve/howmanyinternets/"
-if [[ "$?" -ne 0 ]]; then
+if [ "$?" -ne 0 ]; then
 	echo "howmanyinternets: failed to create data directory"
 	exit
 fi
@@ -133,19 +138,28 @@ function format_data() {
 	fi
 	
 	local SCALE=0
-	local SCALE_ARR=('B' 'KiB' 'MiB' 'GiB' 'TiB' 'PiB' 'EiB')
+	local SCALE_ARR=()
+	local SCALE_STEP=0
 	
+	if [ "$2" -eq 1 ]; then
+		SCALE_ARR=('B' 'KiB' 'MiB' 'GiB' 'TiB' 'PiB' 'EiB')
+		SCALE_STEP=1024
+	else
+		SCALE_ARR=('B' 'KB' 'MB' 'GB' 'TB' 'PB' 'EB')
+		SCALE_STEP=1000
+	fi
+
 	local ORIGINAL=$1
 	local CURRENT=$1
-	while [ "$CURRENT" -ge 1024 ]; do
+	while [ "$CURRENT" -ge "$SCALE_STEP" ]; do
 		SCALE=`expr $SCALE + 1`
-		CURRENT=`expr $CURRENT / 1024`
+		CURRENT=`expr $CURRENT / $SCALE_STEP`
 	done
 	
 	if [ "$SCALE" -eq 0 ]; then
 		RESULT="${ORIGINAL}${SCALE_ARR[0]}"
 	else
-		local NUMBER=`echo 'scale=2; '"$ORIGINAL"' / 1024^'"$SCALE" | bc`
+		local NUMBER=`echo 'scale=2; '"$ORIGINAL"' / '"$SCALE_STEP"'^'"$SCALE" | bc`
 		RESULT="${NUMBER}${SCALE_ARR[$SCALE]}"
 	fi
 }

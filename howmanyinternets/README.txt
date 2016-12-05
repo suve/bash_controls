@@ -12,7 +12,8 @@ Usage: howmanyinternets [-0|-r|-t|-s|-f FORMAT] [-h] DEVICE
       %r, %t, %s sequences can be used to print relevant info.
       Use %% to display a literal percent sign.
   
-  -h  Use a human-readable format. 
+  -h  Use a human-readable format (binary SI prefixes).
+  -H  Use a human-readable format (decimal SI prefixes).
 
 ----------------------------------------
 
