@@ -96,7 +96,7 @@ fi
 
 
 FILENAME="$HOME/.local/share/suve/howmanyinternets/$DEVICE.txt"
-if [ -a "$FILENAME" ] && [ "$MODE" != "-0" ]; then
+if [ -a "$FILENAME" ] && [ "$ZERO" -eq 0 ]; then
 	. "$FILENAME"
 else
 	IN_BYTES=0
@@ -124,6 +124,11 @@ OUT_BYTES_TOTAL=`expr $OUT_BYTES_TOTAL + $OUT_BYTES - $OUT_BYTES_PREVIOUS`
 
 # Save stats
 touch "$FILENAME"
+if [ "$?" -ne 0 ]; then
+	echo "howmanyinternets: failed to create data file"
+	exit
+fi
+
 echo '# howmanyinternets.sh' > "$FILENAME"
 echo "IN_BYTES=$IN_BYTES" >> "$FILENAME"
 echo "OUT_BYTES=$OUT_BYTES" >> "$FILENAME"
