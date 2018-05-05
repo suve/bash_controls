@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Change delimiter in string-to-array conversion
 OLD_IFS=$IFS
@@ -17,13 +17,19 @@ CONFNUM=0
 POWER=1
 # Go through all displays. If a display is active, increase $CONFNUM by power(2, index).
 for ((i=0; i<${#DISPLAY_ARR[@]}; ++i)); do
+	DISPLAY_CURRENT=(${DISPLAY_ARR[i]})
 
-	# Displays are reported as "NAME connected RESOLUTION (properties)".
+	# Displays are reported as "NAME connected [primary] RESOLUTION (properties)".
 	# Inactive displays lack the resolution. 
-	# If the first char of the third field is "(", display is off.
-	DISP_ON=`echo "${DISPLAY_ARR[$i]}" | cut -f3 -d' ' | cut -b1`
+	# If the first char of the third/fourth field is "(", display is off.
+	if [ "${DISPLAY_CURRENT[2]}" != "primary" ]; then
+		DISPLAY_CHK=${DISPLAY_CURRENT[2]}
+	else
+		DISPLAY_CHK=${DISPLAY_CURRENT[3]}
+	fi
 	
-	if [ "$DISP_ON" != "(" ]; then
+	DISPLAY_CHK=${DISPLAY_CHK:0:1}
+	if [ "$DISPLAY_CHK" != "(" ]; then
 		CONFNUM=`expr $CONFNUM + $POWER`
 	fi
 	
